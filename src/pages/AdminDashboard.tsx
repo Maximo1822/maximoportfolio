@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Plus, Pencil, Trash2 } from 'lucide-react';
+import { LogOut, Plus, Pencil, Trash2, Youtube, Link as LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { usePortfolio, PortfolioItem } from '@/contexts/PortfolioContext';
+import { usePortfolio, PortfolioItem, getYouTubeThumbnail } from '@/contexts/PortfolioContext';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -32,12 +32,13 @@ const AdminDashboard = () => {
   } = usePortfolio();
 
   const [editingProfile, setEditingProfile] = useState(profile);
-  const [newItem, setNewItem] = useState({ title: '', thumbnail: '' });
+  const [newVideoItem, setNewVideoItem] = useState({ title: '', thumbnail: '', youtubeUrl: '' });
+  const [newDesignItem, setNewDesignItem] = useState({ title: '', thumbnail: '', imageUrl: '' });
   const [editingItem, setEditingItem] = useState<PortfolioItem | null>(null);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isAddVideoDialogOpen, setIsAddVideoDialogOpen] = useState(false);
+  const [isAddDesignDialogOpen, setIsAddDesignDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState('profile');
-  const [itemType, setItemType] = useState<'video' | 'design'>('video');
 
   useEffect(() => {
     const isAuthenticated = sessionStorage.getItem('admin_authenticated');
@@ -67,8 +68,18 @@ const AdminDashboard = () => {
     });
   };
 
-  const handleAddItem = () => {
-    if (!newItem.title) {
+  const validateUrl = (url: string): boolean => {
+    if (!url) return true;
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleAddVideo = () => {
+    if (!newVideoItem.title.trim()) {
       toast({
         title: 'Error',
         description: 'Please enter a title.',
@@ -77,17 +88,59 @@ const AdminDashboard = () => {
       return;
     }
 
-    if (itemType === 'video') {
-      addVideo(newItem);
-    } else {
-      addDesign(newItem);
+    if (newVideoItem.youtubeUrl && !validateUrl(newVideoItem.youtubeUrl)) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a valid YouTube URL.',
+        variant: 'destructive',
+      });
+      return;
     }
 
-    setNewItem({ title: '', thumbnail: '' });
-    setIsAddDialogOpen(false);
+    addVideo({
+      title: newVideoItem.title.trim(),
+      thumbnail: newVideoItem.thumbnail.trim(),
+      youtubeUrl: newVideoItem.youtubeUrl.trim(),
+    });
+
+    setNewVideoItem({ title: '', thumbnail: '', youtubeUrl: '' });
+    setIsAddVideoDialogOpen(false);
     toast({
-      title: 'Item added',
-      description: `New ${itemType} has been added.`,
+      title: 'Video added',
+      description: 'New video has been added to your portfolio.',
+    });
+  };
+
+  const handleAddDesign = () => {
+    if (!newDesignItem.title.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a title.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (newDesignItem.imageUrl && !validateUrl(newDesignItem.imageUrl)) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a valid image URL.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    addDesign({
+      title: newDesignItem.title.trim(),
+      thumbnail: newDesignItem.thumbnail.trim(),
+      imageUrl: newDesignItem.imageUrl.trim(),
+    });
+
+    setNewDesignItem({ title: '', thumbnail: '', imageUrl: '' });
+    setIsAddDesignDialogOpen(false);
+    toast({
+      title: 'Design added',
+      description: 'New design has been added to your portfolio.',
     });
   };
 
@@ -120,127 +173,12 @@ const AdminDashboard = () => {
     });
   };
 
-  const renderItemGrid = (items: PortfolioItem[], type: 'video' | 'design') => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="text-xl font-bold text-primary">
-          {type === 'video' ? 'Video Portfolio' : 'Design Portfolio'}
-        </h3>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button
-              onClick={() => setItemType(type)}
-              className="bg-primary text-primary-foreground btn-glow"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add {type === 'video' ? 'Video' : 'Design'}
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-card border-border">
-            <DialogHeader>
-              <DialogTitle className="text-primary">Add New {type === 'video' ? 'Video' : 'Design'}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 mt-4">
-              <div>
-                <label className="text-sm text-muted-foreground mb-2 block">Title</label>
-                <Input
-                  value={newItem.title}
-                  onChange={(e) => setNewItem({ ...newItem, title: e.target.value })}
-                  placeholder="Enter title"
-                  className="bg-muted border-border"
-                />
-              </div>
-              <div>
-                <label className="text-sm text-muted-foreground mb-2 block">Thumbnail URL</label>
-                <Input
-                  value={newItem.thumbnail}
-                  onChange={(e) => setNewItem({ ...newItem, thumbnail: e.target.value })}
-                  placeholder="Enter image URL"
-                  className="bg-muted border-border"
-                />
-              </div>
-              <Button onClick={handleAddItem} className="w-full bg-primary text-primary-foreground">
-                Add Item
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {items.map((item) => (
-          <div key={item.id} className="bg-muted border border-border rounded-lg overflow-hidden">
-            <div className="aspect-video bg-background relative">
-              {item.thumbnail ? (
-                <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                  No thumbnail
-                </div>
-              )}
-            </div>
-            <div className="p-4">
-              <h4 className="font-medium text-foreground mb-3">{item.title}</h4>
-              <div className="flex gap-2">
-                <Dialog open={isEditDialogOpen && editingItem?.id === item.id} onOpenChange={(open) => {
-                  setIsEditDialogOpen(open);
-                  if (!open) setEditingItem(null);
-                }}>
-                  <DialogTrigger asChild>
-                    <Button
-                      size="sm"
-                      onClick={() => setEditingItem(item)}
-                      className="flex-1 bg-primary text-primary-foreground"
-                    >
-                      <Pencil className="w-4 h-4 mr-1" />
-                      Edit
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="bg-card border-border">
-                    <DialogHeader>
-                      <DialogTitle className="text-primary">Edit Item</DialogTitle>
-                    </DialogHeader>
-                    {editingItem && (
-                      <div className="space-y-4 mt-4">
-                        <div>
-                          <label className="text-sm text-muted-foreground mb-2 block">Title</label>
-                          <Input
-                            value={editingItem.title}
-                            onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })}
-                            className="bg-muted border-border"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm text-muted-foreground mb-2 block">Thumbnail URL</label>
-                          <Input
-                            value={editingItem.thumbnail}
-                            onChange={(e) => setEditingItem({ ...editingItem, thumbnail: e.target.value })}
-                            className="bg-muted border-border"
-                          />
-                        </div>
-                        <Button onClick={handleUpdateItem} className="w-full bg-primary text-primary-foreground">
-                          Save Changes
-                        </Button>
-                      </div>
-                    )}
-                  </DialogContent>
-                </Dialog>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => handleDeleteItem(item)}
-                  className="flex-1"
-                >
-                  <Trash2 className="w-4 h-4 mr-1" />
-                  Delete
-                </Button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  const getItemThumbnail = (item: PortfolioItem) => {
+    if (item.type === 'video' && item.youtubeUrl) {
+      return getYouTubeThumbnail(item.youtubeUrl) || item.thumbnail;
+    }
+    return item.imageUrl || item.thumbnail;
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -285,6 +223,7 @@ const AdminDashboard = () => {
                     value={editingProfile.name}
                     onChange={(e) => setEditingProfile({ ...editingProfile, name: e.target.value })}
                     className="bg-muted border-border"
+                    maxLength={100}
                   />
                 </div>
                 <div>
@@ -293,6 +232,7 @@ const AdminDashboard = () => {
                     value={editingProfile.title}
                     onChange={(e) => setEditingProfile({ ...editingProfile, title: e.target.value })}
                     className="bg-muted border-border"
+                    maxLength={100}
                   />
                 </div>
                 <div className="md:col-span-2">
@@ -301,6 +241,7 @@ const AdminDashboard = () => {
                     value={editingProfile.bio}
                     onChange={(e) => setEditingProfile({ ...editingProfile, bio: e.target.value })}
                     className="bg-muted border-border min-h-[120px]"
+                    maxLength={500}
                   />
                 </div>
                 <div>
@@ -318,6 +259,7 @@ const AdminDashboard = () => {
                     value={editingProfile.discordUsername}
                     onChange={(e) => setEditingProfile({ ...editingProfile, discordUsername: e.target.value })}
                     className="bg-muted border-border"
+                    maxLength={50}
                   />
                 </div>
                 <div className="md:col-span-2">
@@ -341,12 +283,302 @@ const AdminDashboard = () => {
 
           {/* Videos Tab */}
           <TabsContent value="videos">
-            {renderItemGrid(videos, 'video')}
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-primary">Video Portfolio</h3>
+                <Dialog open={isAddVideoDialogOpen} onOpenChange={setIsAddVideoDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="bg-primary text-primary-foreground btn-glow">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Video
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-card border-border">
+                    <DialogHeader>
+                      <DialogTitle className="text-primary">Add New Video</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 mt-4">
+                      <div>
+                        <label className="text-sm text-muted-foreground mb-2 block">Title *</label>
+                        <Input
+                          value={newVideoItem.title}
+                          onChange={(e) => setNewVideoItem({ ...newVideoItem, title: e.target.value })}
+                          placeholder="Enter video title"
+                          className="bg-muted border-border"
+                          maxLength={100}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
+                          <Youtube className="w-4 h-4 text-destructive" />
+                          YouTube URL
+                        </label>
+                        <Input
+                          value={newVideoItem.youtubeUrl}
+                          onChange={(e) => setNewVideoItem({ ...newVideoItem, youtubeUrl: e.target.value })}
+                          placeholder="https://www.youtube.com/watch?v=..."
+                          className="bg-muted border-border"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Paste YouTube video link (supports youtube.com/watch, youtu.be, and shorts)
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm text-muted-foreground mb-2 block">Custom Thumbnail URL (optional)</label>
+                        <Input
+                          value={newVideoItem.thumbnail}
+                          onChange={(e) => setNewVideoItem({ ...newVideoItem, thumbnail: e.target.value })}
+                          placeholder="https://... (leave empty to use YouTube thumbnail)"
+                          className="bg-muted border-border"
+                        />
+                      </div>
+                      <Button onClick={handleAddVideo} className="w-full bg-primary text-primary-foreground">
+                        Add Video
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {videos.map((item) => (
+                  <div key={item.id} className="bg-muted border border-border rounded-lg overflow-hidden">
+                    <div className="aspect-video bg-background relative">
+                      {getItemThumbnail(item) ? (
+                        <img 
+                          src={getItemThumbnail(item)} 
+                          alt={item.title} 
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                          No thumbnail
+                        </div>
+                      )}
+                      {item.youtubeUrl && (
+                        <div className="absolute top-2 right-2 bg-destructive text-destructive-foreground text-xs px-2 py-1 rounded flex items-center gap-1">
+                          <Youtube className="w-3 h-3" />
+                          YouTube
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4">
+                      <h4 className="font-medium text-foreground mb-3">{item.title}</h4>
+                      {item.youtubeUrl && (
+                        <p className="text-xs text-muted-foreground mb-3 truncate">{item.youtubeUrl}</p>
+                      )}
+                      <div className="flex gap-2">
+                        <Dialog open={isEditDialogOpen && editingItem?.id === item.id} onOpenChange={(open) => {
+                          setIsEditDialogOpen(open);
+                          if (!open) setEditingItem(null);
+                        }}>
+                          <DialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              onClick={() => setEditingItem(item)}
+                              className="flex-1 bg-primary text-primary-foreground"
+                            >
+                              <Pencil className="w-4 h-4 mr-1" />
+                              Edit
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="bg-card border-border">
+                            <DialogHeader>
+                              <DialogTitle className="text-primary">Edit Video</DialogTitle>
+                            </DialogHeader>
+                            {editingItem && editingItem.type === 'video' && (
+                              <div className="space-y-4 mt-4">
+                                <div>
+                                  <label className="text-sm text-muted-foreground mb-2 block">Title</label>
+                                  <Input
+                                    value={editingItem.title}
+                                    onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })}
+                                    className="bg-muted border-border"
+                                    maxLength={100}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
+                                    <Youtube className="w-4 h-4 text-destructive" />
+                                    YouTube URL
+                                  </label>
+                                  <Input
+                                    value={editingItem.youtubeUrl || ''}
+                                    onChange={(e) => setEditingItem({ ...editingItem, youtubeUrl: e.target.value })}
+                                    placeholder="https://www.youtube.com/watch?v=..."
+                                    className="bg-muted border-border"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm text-muted-foreground mb-2 block">Custom Thumbnail URL</label>
+                                  <Input
+                                    value={editingItem.thumbnail}
+                                    onChange={(e) => setEditingItem({ ...editingItem, thumbnail: e.target.value })}
+                                    className="bg-muted border-border"
+                                  />
+                                </div>
+                                <Button onClick={handleUpdateItem} className="w-full bg-primary text-primary-foreground">
+                                  Save Changes
+                                </Button>
+                              </div>
+                            )}
+                          </DialogContent>
+                        </Dialog>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDeleteItem(item)}
+                          className="flex-1"
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" />
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </TabsContent>
 
           {/* Designs Tab */}
           <TabsContent value="designs">
-            {renderItemGrid(designs, 'design')}
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-primary">Design Portfolio</h3>
+                <Dialog open={isAddDesignDialogOpen} onOpenChange={setIsAddDesignDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="bg-primary text-primary-foreground btn-glow">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Design
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-card border-border">
+                    <DialogHeader>
+                      <DialogTitle className="text-primary">Add New Design</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 mt-4">
+                      <div>
+                        <label className="text-sm text-muted-foreground mb-2 block">Title *</label>
+                        <Input
+                          value={newDesignItem.title}
+                          onChange={(e) => setNewDesignItem({ ...newDesignItem, title: e.target.value })}
+                          placeholder="Enter design title"
+                          className="bg-muted border-border"
+                          maxLength={100}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
+                          <LinkIcon className="w-4 h-4 text-primary" />
+                          Image URL *
+                        </label>
+                        <Input
+                          value={newDesignItem.imageUrl}
+                          onChange={(e) => setNewDesignItem({ ...newDesignItem, imageUrl: e.target.value })}
+                          placeholder="https://... (direct link to image)"
+                          className="bg-muted border-border"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Use direct image links from Imgur, Discord CDN, or other image hosts
+                        </p>
+                      </div>
+                      <Button onClick={handleAddDesign} className="w-full bg-primary text-primary-foreground">
+                        Add Design
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {designs.map((item) => (
+                  <div key={item.id} className="bg-muted border border-border rounded-lg overflow-hidden">
+                    <div className="aspect-video bg-background relative">
+                      {getItemThumbnail(item) ? (
+                        <img 
+                          src={getItemThumbnail(item)} 
+                          alt={item.title} 
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                          No image
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4">
+                      <h4 className="font-medium text-foreground mb-3">{item.title}</h4>
+                      <div className="flex gap-2">
+                        <Dialog open={isEditDialogOpen && editingItem?.id === item.id} onOpenChange={(open) => {
+                          setIsEditDialogOpen(open);
+                          if (!open) setEditingItem(null);
+                        }}>
+                          <DialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              onClick={() => setEditingItem(item)}
+                              className="flex-1 bg-primary text-primary-foreground"
+                            >
+                              <Pencil className="w-4 h-4 mr-1" />
+                              Edit
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="bg-card border-border">
+                            <DialogHeader>
+                              <DialogTitle className="text-primary">Edit Design</DialogTitle>
+                            </DialogHeader>
+                            {editingItem && editingItem.type === 'design' && (
+                              <div className="space-y-4 mt-4">
+                                <div>
+                                  <label className="text-sm text-muted-foreground mb-2 block">Title</label>
+                                  <Input
+                                    value={editingItem.title}
+                                    onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })}
+                                    className="bg-muted border-border"
+                                    maxLength={100}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
+                                    <LinkIcon className="w-4 h-4 text-primary" />
+                                    Image URL
+                                  </label>
+                                  <Input
+                                    value={editingItem.imageUrl || ''}
+                                    onChange={(e) => setEditingItem({ ...editingItem, imageUrl: e.target.value })}
+                                    placeholder="https://..."
+                                    className="bg-muted border-border"
+                                  />
+                                </div>
+                                <Button onClick={handleUpdateItem} className="w-full bg-primary text-primary-foreground">
+                                  Save Changes
+                                </Button>
+                              </div>
+                            )}
+                          </DialogContent>
+                        </Dialog>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDeleteItem(item)}
+                          className="flex-1"
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" />
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       </main>

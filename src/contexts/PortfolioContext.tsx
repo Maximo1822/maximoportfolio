@@ -5,6 +5,8 @@ export interface PortfolioItem {
   title: string;
   thumbnail: string;
   type: 'video' | 'design';
+  youtubeUrl?: string;
+  imageUrl?: string;
 }
 
 export interface ProfileData {
@@ -39,17 +41,17 @@ const defaultProfile: ProfileData = {
 };
 
 const defaultVideos: PortfolioItem[] = [
-  { id: '1', title: 'Video Sample 1', thumbnail: '', type: 'video' },
-  { id: '2', title: 'Video Sample 2', thumbnail: '', type: 'video' },
-  { id: '3', title: 'Video Sample 3', thumbnail: '', type: 'video' },
-  { id: '4', title: 'Video Sample 4', thumbnail: '', type: 'video' },
+  { id: '1', title: 'Video Sample 1', thumbnail: '', type: 'video', youtubeUrl: '' },
+  { id: '2', title: 'Video Sample 2', thumbnail: '', type: 'video', youtubeUrl: '' },
+  { id: '3', title: 'Video Sample 3', thumbnail: '', type: 'video', youtubeUrl: '' },
+  { id: '4', title: 'Video Sample 4', thumbnail: '', type: 'video', youtubeUrl: '' },
 ];
 
 const defaultDesigns: PortfolioItem[] = [
-  { id: '1', title: 'Design Sample 1', thumbnail: '', type: 'design' },
-  { id: '2', title: 'Design Sample 2', thumbnail: '', type: 'design' },
-  { id: '3', title: 'Design Sample 3', thumbnail: '', type: 'design' },
-  { id: '4', title: 'Design Sample 4', thumbnail: '', type: 'design' },
+  { id: '1', title: 'Design Sample 1', thumbnail: '', type: 'design', imageUrl: '' },
+  { id: '2', title: 'Design Sample 2', thumbnail: '', type: 'design', imageUrl: '' },
+  { id: '3', title: 'Design Sample 3', thumbnail: '', type: 'design', imageUrl: '' },
+  { id: '4', title: 'Design Sample 4', thumbnail: '', type: 'design', imageUrl: '' },
 ];
 
 const PortfolioContext = createContext<PortfolioContextType | undefined>(undefined);
@@ -144,4 +146,28 @@ export const usePortfolio = () => {
     throw new Error('usePortfolio must be used within a PortfolioProvider');
   }
   return context;
+};
+
+// Helper function to extract YouTube video ID
+export const getYouTubeVideoId = (url: string): string | null => {
+  if (!url) return null;
+  
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+    /youtube\.com\/shorts\/([^&\n?#]+)/,
+  ];
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  
+  return null;
+};
+
+// Get YouTube thumbnail URL
+export const getYouTubeThumbnail = (url: string): string | null => {
+  const videoId = getYouTubeVideoId(url);
+  if (!videoId) return null;
+  return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
 };
