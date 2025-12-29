@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePortfolio, PortfolioItem, getYouTubeThumbnail } from '@/contexts/PortfolioContext';
 import { useToast } from '@/hooks/use-toast';
+import { playUiClick } from '@/lib/sfx';
 import {
   Dialog,
   DialogContent,
@@ -32,6 +33,7 @@ const AdminDashboard = () => {
   } = usePortfolio();
 
   const [editingProfile, setEditingProfile] = useState(profile);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [newVideoItem, setNewVideoItem] = useState({ title: '', thumbnail: '', youtubeUrl: '' });
   const [newDesignItem, setNewDesignItem] = useState({ title: '', thumbnail: '', imageUrl: '' });
   const [editingItem, setEditingItem] = useState<PortfolioItem | null>(null);
@@ -60,12 +62,24 @@ const AdminDashboard = () => {
     navigate('/admin');
   };
 
-  const handleSaveProfile = () => {
-    updateProfile(editingProfile);
-    toast({
-      title: 'Profile updated',
-      description: 'Your profile has been saved successfully.',
-    });
+  const handleSaveProfile = async () => {
+    playUiClick();
+    try {
+      setIsSavingProfile(true);
+      await updateProfile(editingProfile);
+      toast({
+        title: 'Profile updated',
+        description: 'Your profile has been saved successfully.',
+      });
+    } catch (e: any) {
+      toast({
+        title: 'Save failed',
+        description: e?.message || 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSavingProfile(false);
+    }
   };
 
   const validateUrl = (url: string): boolean => {
