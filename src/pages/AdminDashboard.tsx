@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { LogOut, Plus, Pencil, Trash2, Youtube, Link as LinkIcon } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { LogOut, Plus, Pencil, Trash2, Youtube, Link as LinkIcon, ArrowLeft, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -185,7 +185,19 @@ const AdminDashboard = () => {
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-primary text-glow">Admin Dashboard</h1>
+          <div className="flex items-center gap-4">
+            <Link to="/">
+              <Button variant="outline" size="icon" className="border-border hover:bg-primary/10">
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+            </Link>
+            <Link to="/">
+              <Button variant="ghost" size="icon" className="hover:bg-primary/10">
+                <Home className="w-4 h-4" />
+              </Button>
+            </Link>
+            <h1 className="text-2xl font-bold text-primary text-glow">Admin Dashboard</h1>
+          </div>
           <Button
             onClick={handleLogout}
             variant="outline"

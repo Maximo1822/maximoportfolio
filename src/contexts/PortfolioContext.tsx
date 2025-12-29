@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 export interface PortfolioItem {
   id: string;
@@ -22,104 +24,255 @@ interface PortfolioContextType {
   profile: ProfileData;
   videos: PortfolioItem[];
   designs: PortfolioItem[];
-  updateProfile: (data: Partial<ProfileData>) => void;
-  addVideo: (video: Omit<PortfolioItem, 'id' | 'type'>) => void;
-  updateVideo: (id: string, video: Partial<PortfolioItem>) => void;
-  deleteVideo: (id: string) => void;
-  addDesign: (design: Omit<PortfolioItem, 'id' | 'type'>) => void;
-  updateDesign: (id: string, design: Partial<PortfolioItem>) => void;
-  deleteDesign: (id: string) => void;
+  loading: boolean;
+  updateProfile: (data: Partial<ProfileData>) => Promise<void>;
+  addVideo: (video: Omit<PortfolioItem, 'id' | 'type'>) => Promise<void>;
+  updateVideo: (id: string, video: Partial<PortfolioItem>) => Promise<void>;
+  deleteVideo: (id: string) => Promise<void>;
+  addDesign: (design: Omit<PortfolioItem, 'id' | 'type'>) => Promise<void>;
+  updateDesign: (id: string, design: Partial<PortfolioItem>) => Promise<void>;
+  deleteDesign: (id: string) => Promise<void>;
+  refreshData: () => Promise<void>;
 }
 
 const defaultProfile: ProfileData = {
   name: 'Your Name',
   title: 'Video Editor & Graphic Designer',
-  bio: "I'm an editor passionate about creating compelling visual stories through video editing and graphic design. With a keen eye for detail and creative vision, I bring ideas to life.",
+  bio: "I'm an editor passionate about creating compelling visual stories through video editing and graphic design.",
   profileImage: '',
   discordUsername: 'your_username',
   discordServerLink: 'https://discord.gg/your-server',
 };
 
-const defaultVideos: PortfolioItem[] = [
-  { id: '1', title: 'Video Sample 1', thumbnail: '', type: 'video', youtubeUrl: '' },
-  { id: '2', title: 'Video Sample 2', thumbnail: '', type: 'video', youtubeUrl: '' },
-  { id: '3', title: 'Video Sample 3', thumbnail: '', type: 'video', youtubeUrl: '' },
-  { id: '4', title: 'Video Sample 4', thumbnail: '', type: 'video', youtubeUrl: '' },
-];
-
-const defaultDesigns: PortfolioItem[] = [
-  { id: '1', title: 'Design Sample 1', thumbnail: '', type: 'design', imageUrl: '' },
-  { id: '2', title: 'Design Sample 2', thumbnail: '', type: 'design', imageUrl: '' },
-  { id: '3', title: 'Design Sample 3', thumbnail: '', type: 'design', imageUrl: '' },
-  { id: '4', title: 'Design Sample 4', thumbnail: '', type: 'design', imageUrl: '' },
-];
-
 const PortfolioContext = createContext<PortfolioContextType | undefined>(undefined);
 
 export const PortfolioProvider = ({ children }: { children: ReactNode }) => {
-  const [profile, setProfile] = useState<ProfileData>(() => {
-    const saved = localStorage.getItem('portfolio_profile');
-    return saved ? JSON.parse(saved) : defaultProfile;
-  });
+  const [profile, setProfile] = useState<ProfileData>(defaultProfile);
+  const [videos, setVideos] = useState<PortfolioItem[]>([]);
+  const [designs, setDesigns] = useState<PortfolioItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
-  const [videos, setVideos] = useState<PortfolioItem[]>(() => {
-    const saved = localStorage.getItem('portfolio_videos');
-    return saved ? JSON.parse(saved) : defaultVideos;
-  });
+  const fetchData = async () => {
+    try {
+      // Fetch profile settings
+      const { data: settingsData, error: settingsError } = await supabase
+        .from('portfolio_settings')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
 
-  const [designs, setDesigns] = useState<PortfolioItem[]>(() => {
-    const saved = localStorage.getItem('portfolio_designs');
-    return saved ? JSON.parse(saved) : defaultDesigns;
-  });
+      if (settingsError) throw settingsError;
+
+      if (settingsData) {
+        setProfile({
+          name: settingsData.name,
+          title: settingsData.title,
+          bio: settingsData.bio,
+          profileImage: settingsData.profile_image || '',
+          discordUsername: settingsData.discord_username,
+          discordServerLink: '',
+        });
+      }
+
+      // Fetch portfolio items
+      const { data: itemsData, error: itemsError } = await supabase
+        .from('portfolio_items')
+        .select('*')
+        .order('sort_order', { ascending: true });
+
+      if (itemsError) throw itemsError;
+
+      if (itemsData) {
+        const videoItems: PortfolioItem[] = itemsData
+          .filter(item => item.type === 'video')
+          .map(item => ({
+            id: item.id,
+            title: item.title,
+            thumbnail: '',
+            type: 'video' as const,
+            youtubeUrl: item.youtube_url || '',
+          }));
+
+        const designItems: PortfolioItem[] = itemsData
+          .filter(item => item.type === 'design')
+          .map(item => ({
+            id: item.id,
+            title: item.title,
+            thumbnail: '',
+            type: 'design' as const,
+            imageUrl: item.image_url || '',
+          }));
+
+        setVideos(videoItems);
+        setDesigns(designItems);
+      }
+    } catch (error) {
+      console.error('Error fetching portfolio data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    localStorage.setItem('portfolio_profile', JSON.stringify(profile));
-  }, [profile]);
+    fetchData();
+  }, []);
 
-  useEffect(() => {
-    localStorage.setItem('portfolio_videos', JSON.stringify(videos));
-  }, [videos]);
-
-  useEffect(() => {
-    localStorage.setItem('portfolio_designs', JSON.stringify(designs));
-  }, [designs]);
-
-  const updateProfile = (data: Partial<ProfileData>) => {
-    setProfile(prev => ({ ...prev, ...data }));
+  const refreshData = async () => {
+    setLoading(true);
+    await fetchData();
   };
 
-  const addVideo = (video: Omit<PortfolioItem, 'id' | 'type'>) => {
-    const newVideo: PortfolioItem = {
-      ...video,
-      id: Date.now().toString(),
-      type: 'video',
-    };
-    setVideos(prev => [...prev, newVideo]);
+  const updateProfile = async (data: Partial<ProfileData>) => {
+    try {
+      const { error } = await supabase
+        .from('portfolio_settings')
+        .update({
+          name: data.name ?? profile.name,
+          title: data.title ?? profile.title,
+          bio: data.bio ?? profile.bio,
+          profile_image: data.profileImage ?? profile.profileImage,
+          discord_username: data.discordUsername ?? profile.discordUsername,
+        })
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Update all rows
+
+      if (error) throw error;
+
+      setProfile(prev => ({ ...prev, ...data }));
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      throw error;
+    }
   };
 
-  const updateVideo = (id: string, video: Partial<PortfolioItem>) => {
-    setVideos(prev => prev.map(v => v.id === id ? { ...v, ...video } : v));
+  const addVideo = async (video: Omit<PortfolioItem, 'id' | 'type'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('portfolio_items')
+        .insert({
+          title: video.title,
+          type: 'video',
+          youtube_url: video.youtubeUrl || null,
+          sort_order: videos.length,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const newVideo: PortfolioItem = {
+        id: data.id,
+        title: data.title,
+        thumbnail: '',
+        type: 'video',
+        youtubeUrl: data.youtube_url || '',
+      };
+
+      setVideos(prev => [...prev, newVideo]);
+    } catch (error) {
+      console.error('Error adding video:', error);
+      throw error;
+    }
   };
 
-  const deleteVideo = (id: string) => {
-    setVideos(prev => prev.filter(v => v.id !== id));
+  const updateVideo = async (id: string, video: Partial<PortfolioItem>) => {
+    try {
+      const { error } = await supabase
+        .from('portfolio_items')
+        .update({
+          title: video.title,
+          youtube_url: video.youtubeUrl,
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setVideos(prev => prev.map(v => v.id === id ? { ...v, ...video } : v));
+    } catch (error) {
+      console.error('Error updating video:', error);
+      throw error;
+    }
   };
 
-  const addDesign = (design: Omit<PortfolioItem, 'id' | 'type'>) => {
-    const newDesign: PortfolioItem = {
-      ...design,
-      id: Date.now().toString(),
-      type: 'design',
-    };
-    setDesigns(prev => [...prev, newDesign]);
+  const deleteVideo = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('portfolio_items')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setVideos(prev => prev.filter(v => v.id !== id));
+    } catch (error) {
+      console.error('Error deleting video:', error);
+      throw error;
+    }
   };
 
-  const updateDesign = (id: string, design: Partial<PortfolioItem>) => {
-    setDesigns(prev => prev.map(d => d.id === id ? { ...d, ...design } : d));
+  const addDesign = async (design: Omit<PortfolioItem, 'id' | 'type'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('portfolio_items')
+        .insert({
+          title: design.title,
+          type: 'design',
+          image_url: design.imageUrl || null,
+          sort_order: designs.length,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const newDesign: PortfolioItem = {
+        id: data.id,
+        title: data.title,
+        thumbnail: '',
+        type: 'design',
+        imageUrl: data.image_url || '',
+      };
+
+      setDesigns(prev => [...prev, newDesign]);
+    } catch (error) {
+      console.error('Error adding design:', error);
+      throw error;
+    }
   };
 
-  const deleteDesign = (id: string) => {
-    setDesigns(prev => prev.filter(d => d.id !== id));
+  const updateDesign = async (id: string, design: Partial<PortfolioItem>) => {
+    try {
+      const { error } = await supabase
+        .from('portfolio_items')
+        .update({
+          title: design.title,
+          image_url: design.imageUrl,
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setDesigns(prev => prev.map(d => d.id === id ? { ...d, ...design } : d));
+    } catch (error) {
+      console.error('Error updating design:', error);
+      throw error;
+    }
+  };
+
+  const deleteDesign = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('portfolio_items')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setDesigns(prev => prev.filter(d => d.id !== id));
+    } catch (error) {
+      console.error('Error deleting design:', error);
+      throw error;
+    }
   };
 
   return (
@@ -127,6 +280,7 @@ export const PortfolioProvider = ({ children }: { children: ReactNode }) => {
       profile,
       videos,
       designs,
+      loading,
       updateProfile,
       addVideo,
       updateVideo,
@@ -134,6 +288,7 @@ export const PortfolioProvider = ({ children }: { children: ReactNode }) => {
       addDesign,
       updateDesign,
       deleteDesign,
+      refreshData,
     }}>
       {children}
     </PortfolioContext.Provider>
