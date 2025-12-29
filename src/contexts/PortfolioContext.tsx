@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 
 export interface PortfolioItem {
   id: string;
@@ -48,10 +47,10 @@ const PortfolioContext = createContext<PortfolioContextType | undefined>(undefin
 
 export const PortfolioProvider = ({ children }: { children: ReactNode }) => {
   const [profile, setProfile] = useState<ProfileData>(defaultProfile);
+  const [settingsId, setSettingsId] = useState<string | null>(null);
   const [videos, setVideos] = useState<PortfolioItem[]>([]);
   const [designs, setDesigns] = useState<PortfolioItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
 
   const fetchData = async () => {
     try {
@@ -59,12 +58,14 @@ export const PortfolioProvider = ({ children }: { children: ReactNode }) => {
       const { data: settingsData, error: settingsError } = await supabase
         .from('portfolio_settings')
         .select('*')
+        .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (settingsError) throw settingsError;
 
       if (settingsData) {
+        setSettingsId(settingsData.id);
         setProfile({
           name: settingsData.name,
           title: settingsData.title,
@@ -125,18 +126,45 @@ export const PortfolioProvider = ({ children }: { children: ReactNode }) => {
 
   const updateProfile = async (data: Partial<ProfileData>) => {
     try {
-      const { error } = await supabase
-        .from('portfolio_settings')
-        .update({
-          name: data.name ?? profile.name,
-          title: data.title ?? profile.title,
-          bio: data.bio ?? profile.bio,
-          profile_image: data.profileImage ?? profile.profileImage,
-          discord_username: data.discordUsername ?? profile.discordUsername,
-        })
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // Update all rows
+      const payload = {
+        name: data.name ?? profile.name,
+        title: data.title ?? profile.title,
+        bio: data.bio ?? profile.bio,
+        profile_image: data.profileImage ?? profile.profileImage,
+        discord_username: data.discordUsername ?? profile.discordUsername,
+      };
 
-      if (error) throw error;
+      if (settingsId) {
+        const { data: updatedRow, error } = await supabase
+          .from('portfolio_settings')
+          .update(payload)
+          .eq('id', settingsId)
+          .select('id')
+          .maybeSingle();
+
+        if (error) throw error;
+
+        // If the row was deleted somehow, recreate it.
+        if (!updatedRow) {
+          const { data: insertedRow, error: insertError } = await supabase
+            .from('portfolio_settings')
+            .insert(payload)
+            .select('id')
+            .single();
+
+          if (insertError) throw insertError;
+          setSettingsId(insertedRow.id);
+        }
+      } else {
+        const { data: insertedRow, error } = await supabase
+          .from('portfolio_settings')
+          .insert(payload)
+          .select('id')
+          .single();
+
+        if (error) throw error;
+        setSettingsId(insertedRow.id);
+      }
 
       setProfile(prev => ({ ...prev, ...data }));
     } catch (error) {
