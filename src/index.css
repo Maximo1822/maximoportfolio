@@ -179,6 +179,34 @@
     }
   }
 
+  /* Blue to White pulse animation */
+  @keyframes pulseGlowBlueToWhite {
+    0%, 100% {
+      box-shadow: 0 0 20px hsl(187 100% 50% / 0.6);
+    }
+    50% {
+      box-shadow: 0 0 40px hsl(0 0% 100% / 0.8);
+    }
+  }
+
+  /* White to Blue pulse animation */
+  @keyframes pulseGlowWhiteToBlue {
+    0%, 100% {
+      box-shadow: 0 0 20px hsl(0 0% 100% / 0.6);
+    }
+    50% {
+      box-shadow: 0 0 40px hsl(187 100% 50% / 0.8);
+    }
+  }
+
+  .pulse-glow-blue-to-white {
+    animation: pulseGlowBlueToWhite 2s ease-in-out infinite;
+  }
+
+  .pulse-glow-white-to-blue {
+    animation: pulseGlowWhiteToBlue 2s ease-in-out infinite;
+  }
+
   @keyframes float {
     0%, 100% {
       transform: translateY(0);

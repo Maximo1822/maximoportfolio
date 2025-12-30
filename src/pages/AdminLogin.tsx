@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Lock, Eye, EyeOff } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -41,6 +41,13 @@ const AdminLogin = () => {
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       {/* Background effects */}
       <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
+      
+      {/* Back button */}
+      <Link to="/" className="absolute top-6 left-6 z-20">
+        <Button variant="outline" size="icon" className="border-border hover:bg-primary/10">
+          <ArrowLeft className="w-4 h-4" />
+        </Button>
+      </Link>
       
       <div className="relative z-10 w-full max-w-md">
         <div className="bg-card border border-border rounded-2xl p-8 glow-border">

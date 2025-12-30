@@ -17,6 +17,7 @@ export interface ProfileData {
   profileImage: string;
   discordUsername: string;
   discordServerLink: string;
+  waterPulseMode: 'blue_to_white' | 'white_to_blue';
 }
 
 interface PortfolioContextType {
@@ -40,7 +41,8 @@ const defaultProfile: ProfileData = {
   bio: "I'm an editor passionate about creating compelling visual stories through video editing and graphic design.",
   profileImage: '',
   discordUsername: 'your_username',
-  discordServerLink: 'https://discord.gg/your-server',
+  discordServerLink: 'https://discord.gg/qDwnyGKxK',
+  waterPulseMode: 'blue_to_white',
 };
 
 const PortfolioContext = createContext<PortfolioContextType | undefined>(undefined);
@@ -72,7 +74,8 @@ export const PortfolioProvider = ({ children }: { children: ReactNode }) => {
           bio: settingsData.bio,
           profileImage: settingsData.profile_image || '',
           discordUsername: settingsData.discord_username,
-          discordServerLink: '',
+          discordServerLink: (settingsData as any).discord_server_link || 'https://discord.gg/qDwnyGKxK',
+          waterPulseMode: ((settingsData as any).water_pulse_mode as 'blue_to_white' | 'white_to_blue') || 'blue_to_white',
         });
       }
 
@@ -132,6 +135,8 @@ export const PortfolioProvider = ({ children }: { children: ReactNode }) => {
         bio: data.bio ?? profile.bio,
         profile_image: data.profileImage ?? profile.profileImage,
         discord_username: data.discordUsername ?? profile.discordUsername,
+        discord_server_link: data.discordServerLink ?? profile.discordServerLink,
+        water_pulse_mode: data.waterPulseMode ?? profile.waterPulseMode,
       };
 
       if (settingsId) {

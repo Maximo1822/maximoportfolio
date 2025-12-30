@@ -297,12 +297,38 @@ const AdminDashboard = () => {
                     className="bg-muted border-border"
                   />
                 </div>
+                <div className="md:col-span-2">
+                  <label className="text-sm text-muted-foreground mb-2 block">Water Pulse Effect</label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="waterPulseMode"
+                        checked={editingProfile.waterPulseMode === 'blue_to_white'}
+                        onChange={() => setEditingProfile({ ...editingProfile, waterPulseMode: 'blue_to_white' })}
+                        className="accent-primary"
+                      />
+                      <span className="text-foreground">Blue → White</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="waterPulseMode"
+                        checked={editingProfile.waterPulseMode === 'white_to_blue'}
+                        onChange={() => setEditingProfile({ ...editingProfile, waterPulseMode: 'white_to_blue' })}
+                        className="accent-primary"
+                      />
+                      <span className="text-foreground">White → Blue</span>
+                    </label>
+                  </div>
+                </div>
               </div>
               <Button
                 onClick={handleSaveProfile}
                 className="mt-6 bg-primary text-primary-foreground btn-glow"
+                disabled={isSavingProfile}
               >
-                Save Profile
+                {isSavingProfile ? 'Saving...' : 'Save Profile'}
               </Button>
             </div>
           </TabsContent>
