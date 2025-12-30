@@ -54,32 +54,38 @@ export type Database = {
         Row: {
           bio: string
           created_at: string
+          discord_server_link: string
           discord_username: string
           id: string
           name: string
           profile_image: string | null
           title: string
           updated_at: string
+          water_pulse_mode: string
         }
         Insert: {
           bio?: string
           created_at?: string
+          discord_server_link?: string
           discord_username?: string
           id?: string
           name?: string
           profile_image?: string | null
           title?: string
           updated_at?: string
+          water_pulse_mode?: string
         }
         Update: {
           bio?: string
           created_at?: string
+          discord_server_link?: string
           discord_username?: string
           id?: string
           name?: string
           profile_image?: string | null
           title?: string
           updated_at?: string
+          water_pulse_mode?: string
         }
         Relationships: []
       }

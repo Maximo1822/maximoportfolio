@@ -21,7 +21,7 @@ const HeroSection = () => {
       <div className="relative z-10 flex flex-col items-center text-center px-4">
         {/* Profile Image with Glow Ring */}
         <div className="relative mb-8">
-          <div className="w-48 h-48 md:w-56 md:h-56 rounded-full border-2 border-primary profile-glow pulse-glow flex items-center justify-center bg-card overflow-hidden">
+          <div className={`w-48 h-48 md:w-56 md:h-56 rounded-full border-2 border-primary profile-glow flex items-center justify-center bg-card overflow-hidden ${profile.waterPulseMode === 'blue_to_white' ? 'pulse-glow-blue-to-white' : 'pulse-glow-white-to-blue'}`}>
             {profile.profileImage ? (
               <img 
                 src={profile.profileImage} 
