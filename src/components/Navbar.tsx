@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import logo from '@/assets/logo.jpg';
 import { Menu, X } from 'lucide-react';
 
 const Navbar = () => {
@@ -25,9 +26,9 @@ const Navbar = () => {
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <Link 
           to="/" 
-          className="text-2xl font-bold text-primary text-glow hover:text-glow-intense transition-all duration-300"
+          className="flex items-center gap-2 hover:opacity-80 transition-opacity duration-300"
         >
-          Portfolio
+          <img src={logo} alt="Logo" className="w-9 h-9 rounded-full" />
         </Link>
         
         {/* Desktop Navigation */}
